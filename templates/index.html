@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Emotion Detection System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+</head>
+<body>
+
+<a class="skip-link" href="#videoPanel">Skip to workspace</a>
+
+<header class="topbar">
+    <div class="brand">
+        <div class="brand-mark" aria-hidden="true">ED</div>
+        <div class="brand-text">
+            <h1>AI Emotion Detection System</h1>
+            <p>Real-time facial &amp; speech emotion recognition</p>
+        </div>
+    </div>
+    <nav class="mainnav" aria-label="Sections">
+        <a href="#videoPanel">Workspace</a>
+        <a href="#sessionPanel">Session</a>
+        <a href="#timelinePanel">Timeline</a>
+        <a href="#historyPanel">Recordings</a>
+    </nav>
+    <div class="badges">
+        <span class="badge badge-local" title="No cloud services are used">🔒 100% Local</span>
+        <span class="badge" id="statusVideo" data-state="loading">Face model…</span>
+        <span class="badge" id="statusAudio" data-state="loading">Speech model…</span>
+    </div>
+</header>
+
+<div id="toastHost" class="toast-host" aria-live="polite"></div>
+
+<main class="layout">
+
+    <p class="disclaimer panel-wide" style="grid-column:1/-1">
+        Results are model estimates of facial expression and vocal tone, not a person's
+        actual emotional state. Confidence is the model's own output, not a guarantee.
+        Everything is processed on this computer; nothing is uploaded.
+    </p>
+
+    <!-- =============================== VIDEO =============================== -->
+    <section class="panel" id="videoPanel">
+        <div class="panel-head">
+            <h2><span class="ico">🎥</span> Video Emotion Detection</h2>
+            <span class="chip" id="videoFps">idle</span>
+        </div>
+
+        <div class="stage">
+            <video id="preview" playsinline muted autoplay></video>
+            <canvas id="overlay"></canvas>
+
+            <div class="stage-empty" id="stageEmpty">
+                <div class="stage-empty-icon">📷</div>
+                <p>Camera is off</p>
+                <span>Press <b>Start Camera</b> and allow access when macOS asks</span>
+            </div>
+
+            <div class="rec-pill" id="videoRecPill" hidden>
+                <span class="rec-dot"></span> REC <b id="videoRecTime">00:00</b>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="btnCamStart">
+                <span class="ico">▶</span> Start Camera
+            </button>
+            <button class="btn" id="btnCamStop" disabled>
+                <span class="ico">■</span> Stop Camera
+            </button>
+            <button class="btn btn-danger" id="btnRecStart" disabled>
+                <span class="ico">⏺</span> Record
+            </button>
+            <button class="btn" id="btnRecStop" disabled>
+                <span class="ico">⏹</span> Stop &amp; Save
+            </button>
+        </div>
+
+        <div class="report-actions" id="videoReports" hidden role="group" aria-label="Video-only reports"></div>
+
+        <div class="result" id="videoResult" data-emotion="none">
+            <div class="result-main">
+                <div class="result-emoji" id="videoEmoji">🙂</div>
+                <div class="result-copy">
+                    <span class="result-label">Detected emotion</span>
+                    <strong class="result-value" id="videoEmotion">Waiting…</strong>
+                    <span class="result-sub" id="videoHint">Start the camera to begin analysis</span>
+                </div>
+            </div>
+            <div class="result-conf">
+                <div class="conf-top">
+                    <span>Confidence</span>
+                    <b id="videoConfValue">0%</b>
+                </div>
+                <div class="meter"><i id="videoConfBar" style="width:0%"></i></div>
+            </div>
+        </div>
+
+        <details class="breakdown" id="videoBreakdownWrap">
+            <summary>All emotion scores</summary>
+            <div class="bars" id="videoBars"></div>
+        </details>
+    </section>
+
+    <!-- =============================== AUDIO =============================== -->
+    <section class="panel" id="audioPanel">
+        <div class="panel-head">
+            <h2><span class="ico">🎙️</span> Audio Emotion Detection</h2>
+            <span class="chip" id="audioState">idle</span>
+        </div>
+
+        <div class="mic-stage">
+            <canvas id="waveform"></canvas>
+            <div class="mic-overlay" id="micIdle">
+                <div class="mic-orb"><span>🎤</span></div>
+                <p>Record 2–5 seconds of speech</p>
+                <span>Say a full sentence for the best accuracy</span>
+            </div>
+            <div class="rec-pill" id="audioRecPill" hidden>
+                <span class="rec-dot"></span> REC <b id="audioRecTime">00:00</b>
+            </div>
+        </div>
+
+        <div class="level-row">
+            <span class="level-label">Input level</span>
+            <div class="meter meter-level"><i id="micLevel" style="width:0%"></i></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="btnMicStart">
+                <span class="ico">⏺</span> Start Recording
+            </button>
+            <button class="btn" id="btnMicStop" disabled>
+                <span class="ico">⏹</span> Stop &amp; Analyze
+            </button>
+        </div>
+
+        <div class="report-actions" id="audioReports" hidden role="group" aria-label="Audio-only reports"></div>
+
+        <div class="result" id="audioResult" data-emotion="none">
+            <div class="result-main">
+                <div class="result-emoji" id="audioEmoji">🎧</div>
+                <div class="result-copy">
+                    <span class="result-label">Voice emotion</span>
+                    <strong class="result-value" id="audioEmotion">Waiting…</strong>
+                    <span class="result-sub" id="audioHint">Record your voice to analyze it</span>
+                </div>
+            </div>
+            <div class="result-conf">
+                <div class="conf-top">
+                    <span>Confidence</span>
+                    <b id="audioConfValue">0%</b>
+                </div>
+                <div class="meter"><i id="audioConfBar" style="width:0%"></i></div>
+            </div>
+        </div>
+
+        <details class="breakdown" id="audioBreakdownWrap">
+            <summary>All emotion scores</summary>
+            <div class="bars" id="audioBars"></div>
+        </details>
+    </section>
+
+    <!-- ============================== SESSION ============================== -->
+    <section class="panel panel-wide" id="sessionPanel">
+        <div class="panel-head">
+            <h2><span class="ico">🎬</span> Combined Session Recording</h2>
+            <span class="chip" id="sessionState">idle</span>
+        </div>
+        <p class="path-note">
+            Records the camera and the microphone together, keeps both original files, then
+            merges them into one synchronised <b>MP4</b> with local FFmpeg and builds a
+            <b>PDF</b> and <b>CSV</b> emotion reports (20-second observer timeline).
+        </p>
+
+        <div class="controls">
+            <button class="btn btn-danger" id="btnSessionStart">
+                <span class="ico">⏺</span> Start Session Recording
+            </button>
+            <button class="btn" id="btnSessionStop" disabled>
+                <span class="ico">⏹</span> Stop, Merge &amp; Report
+            </button>
+        </div>
+
+        <div class="session-status" id="sessionStatus" hidden>
+            <span class="rec-dot"></span>
+            <span id="sessionStatusText">Recording…</span>
+            <b id="sessionTime">00:00</b>
+            <span class="session-sep">·</span>
+            <span id="sessionSamples">0 facial samples</span>
+        </div>
+
+        <div class="session-output" id="sessionOutput" hidden></div>
+    </section>
+
+    <!-- ============================== TIMELINE ============================= -->
+    <section class="panel panel-wide" id="timelinePanel">
+        <div class="panel-head">
+            <h2><span class="ico">📊</span> Live Session Timeline</h2>
+            <button class="link-btn" id="btnClearTimeline">Clear</button>
+        </div>
+        <div class="timeline" id="timeline">
+            <p class="empty-note">Detections from this session will appear here.</p>
+        </div>
+    </section>
+
+    <!-- ============================== HISTORY ============================== -->
+    <section class="panel panel-wide" id="historyPanel">
+        <div class="panel-head">
+            <h2><span class="ico">💾</span> Saved Recordings</h2>
+            <div class="head-actions">
+                <div class="filters" id="historyFilters">
+                    <button class="filter active" data-filter="all" aria-pressed="true">All</button>
+                    <button class="filter" data-filter="video">Video</button>
+                    <button class="filter" data-filter="audio">Audio</button>
+                    <button class="filter" data-filter="merged">MP4</button>
+                    <button class="filter" data-filter="report">Reports</button>
+                </div>
+                <button class="link-btn" id="btnRefreshHistory">Refresh</button>
+            </div>
+        </div>
+        <p class="path-note">
+            Videos → <code>saved_videos/</code> · Audio → <code>saved_audio/</code> · MP4 → <code>saved_recordings/</code> · Reports → <code>saved_reports/</code>
+        </p>
+        <div class="history" id="history">
+            <p class="empty-note">Loading saved recordings…</p>
+        </div>
+    </section>
+
+</main>
+
+<footer class="footer">
+    <p>
+        Facial emotions: <b>FER+</b> (ONNX) with <b>YuNet</b> face detection ·
+        Speech emotions: <b>scikit-learn</b> trained on <b>RAVDESS</b> ·
+        All inference runs locally on this machine.
+    </p>
+</footer>
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

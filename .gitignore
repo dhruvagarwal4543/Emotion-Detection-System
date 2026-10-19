@@ -1,0 +1,29 @@
+# Virtual environment
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Recordings and reports produced by the app (kept locally, never committed)
+saved_videos/*
+saved_audio/*
+saved_recordings/*
+saved_reports/*
+!saved_videos/.gitkeep
+!saved_audio/.gitkeep
+!saved_recordings/.gitkeep
+!saved_reports/.gitkeep
+
+# Pretrained models - re-fetch with `python download_models.py`
+models/*.onnx
+# Trained speech model - rebuild with `python train_audio_model.py`
+models/*.joblib
+
+# RAVDESS dataset (~570 MB) - download separately, see README
+data/
+
+# macOS
+.DS_Store
